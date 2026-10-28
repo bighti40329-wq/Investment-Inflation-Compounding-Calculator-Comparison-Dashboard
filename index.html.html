@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>投資複利與通膨侵蝕計算比較儀表板</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#1e1b4b',
+            },
+            accent: {
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              rose: '#f43f5e',
+              cyan: '#06b6d4',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .custom-range-thumb::-webkit-slider-thumb {
+      appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #4f46e5;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(79, 70, 229, 0.4);
+      transition: all 0.15s ease-in-out;
+    }
+    .custom-range-thumb::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #4338ca;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+
+  <!-- Header Navigation -->
+  <header class="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+          <i class="fa-solid fa-chart-line text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">投資複利與通膨計算比較 APP</h1>
+          <p class="text-xs text-slate-500 font-medium">依據「年化與通膨.xlsx」精算模型</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="resetBtn" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors duration-150">
+          <i class="fa-solid fa-arrow-rotate-left mr-1.5"></i> 重設原始參數
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow space-y-6">
+
+    <!-- Preset Scenarios Section -->
+    <section class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="flex h-2 w-2 rounded-full bg-indigo-600"></span>
+          <h2 class="text-xs sm:text-sm font-bold text-slate-700 tracking-wide uppercase">情境快速載入 (Quick Presets)</h2>
+        </div>
+        <span class="text-xs text-slate-400">點擊即時套用配置</span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+        <button onclick="applyPreset(10000, 10.0, 3.0, 30)" class="preset-btn group p-3 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 hover:border-indigo-400 text-left transition-all duration-150">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-indigo-900">Excel 原始設定</span>
+            <span class="text-[10px] bg-indigo-200/80 text-indigo-800 px-1.5 py-0.5 rounded font-mono font-medium">預設</span>
+          </div>
+          <p class="text-[11px] text-indigo-700/80 mt-1">月存 1萬 · 10% 年化 · 3% 通膨 · 30年</p>
+        </button>
+
+        <button onclick="applyPreset(20000, 5.0, 2.5, 30)" class="preset-btn group p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-emerald-50 hover:border-emerald-300 text-left transition-all duration-150">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-800 group-hover:text-emerald-900">保守防守型</span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-mono font-medium">低風險</span>
+          </div>
+          <p class="text-[11px] text-slate-500 group-hover:text-emerald-700 mt-1">月存 2萬 · 5% 年化 · 2.5% 通膨 · 30年</p>
+        </button>
+
+        <button onclick="applyPreset(15000, 12.0, 3.0, 30)" class="preset-btn group p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-amber-50 hover:border-amber-300 text-left transition-all duration-150">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-800 group-hover:text-amber-900">積極指數成長</span>
+            <span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono font-medium">大盤指數</span>
+          </div>
+          <p class="text-[11px] text-slate-500 group-hover:text-amber-700 mt-1">月存 1.5萬 · 12% 年化 · 3% 通膨 · 30年</p>
+        </button>
+
+        <button onclick="applyPreset(30000, 8.0, 2.5, 25)" class="preset-btn group p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-rose-50 hover:border-rose-300 text-left transition-all duration-150">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-800 group-hover:text-rose-900">高儲蓄 FIRE 族</span>
+            <span class="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-mono font-medium">提早退休</span>
+          </div>
+          <p class="text-[11px] text-slate-500 group-hover:text-rose-700 mt-1">月存 3萬 · 8% 年化 · 2.5% 通膨 · 25年</p>
+        </button>
+      </div>
+    </section>
+
+    <!-- Interactive Parameter Input Grid -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Parameter 1: Monthly Investment (C2) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+          <label for="monthlyInput" class="text-xs font-bold text-slate-600 flex items-center">
+            <i class="fa-solid fa-wallet text-indigo-500 mr-1.5"></i> 每月投資金額 (月付 C2)
+          </label>
+          <span class="text-xs font-bold text-indigo-600 font-mono" id="monthlyDisplay">NT$ 10,000</span>
+        </div>
+        <div class="relative my-3">
+          <input type="number" id="monthlyInput" min="1000" max="500000" step="1000" value="10000"
+            class="w-full px-3 py-2 text-base font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition font-mono">
+          <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">元/月</span>
+        </div>
+        <input type="range" id="monthlySlider" min="1000" max="100000" step="1000" value="10000"
+          class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer custom-range-thumb">
+        <!-- Quick Chip Buttons -->
+        <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+          <span>快速設定:</span>
+          <div class="space-x-1">
+            <button onclick="setMonthly(5000)" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 transition">5千</button>
+            <button onclick="setMonthly(10000)" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 transition">1萬</button>
+            <button onclick="setMonthly(20000)" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 transition">2萬</button>
+            <button onclick="setMonthly(30000)" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 transition">3萬</button>
+            <button onclick="setMonthly(50000)" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 transition">5萬</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parameter 2: Nominal Return (D3) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+          <label for="nominalReturnInput" class="text-xs font-bold text-slate-600 flex items-center">
+            <i class="fa-solid fa-arrow-trend-up text-emerald-500 mr-1.5"></i> 預期年化報酬率 (D3)
+          </label>
+          <span class="text-xs font-bold text-emerald-600 font-mono" id="nominalReturnDisplay">10.0%</span>
+        </div>
+        <div class="relative my-3">
+          <input type="number" id="nominalReturnInput" min="0.1" max="30" step="0.1" value="10.0"
+            class="w-full px-3 py-2 text-base font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition font-mono">
+          <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">% / 年</span>
+        </div>
+        <input type="range" id="nominalReturnSlider" min="1.0" max="25.0" step="0.1" value="10.0"
+          class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer custom-range-thumb">
+        <div class="flex justify-between mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+          <span>常見: 定存 1.7%</span>
+          <span>高股息 6%</span>
+          <span>標普500 10%</span>
+        </div>
+      </div>
+
+      <!-- Parameter 3: Inflation Rate (F3) & Real Return (E3-1) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+          <label for="inflationInput" class="text-xs font-bold text-slate-600 flex items-center">
+            <i class="fa-solid fa-fire-flame-curved text-rose-500 mr-1.5"></i> 預估年通膨率 (F3)
+          </label>
+          <span class="text-xs font-bold text-rose-600 font-mono" id="inflationDisplay">3.0%</span>
+        </div>
+        <div class="relative my-3">
+          <input type="number" id="inflationInput" min="0" max="15" step="0.1" value="3.0"
+            class="w-full px-3 py-2 text-base font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:bg-white outline-none transition font-mono">
+          <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">% / 年</span>
+        </div>
+        <input type="range" id="inflationSlider" min="0.0" max="10.0" step="0.1" value="3.0"
+          class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer custom-range-thumb">
+        <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+          <span class="text-slate-500">實質成長率 (E3-1):</span>
+          <span id="realGrowthDisplay" class="font-bold text-indigo-700 font-mono bg-indigo-50 px-2 py-0.5 rounded">7.0%</span>
+        </div>
+      </div>
+
+      <!-- Parameter 4: Investment Horizon (Years) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-2">
+          <label for="yearsInput" class="text-xs font-bold text-slate-600 flex items-center">
+            <i class="fa-regular fa-clock text-cyan-500 mr-1.5"></i> 投資複利年限
+          </label>
+          <span class="text-xs font-bold text-cyan-600 font-mono" id="yearsDisplay">30 年</span>
+        </div>
+        <div class="relative my-3">
+          <input type="number" id="yearsInput" min="1" max="50" step="1" value="30"
+            class="w-full px-3 py-2 text-base font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:bg-white outline-none transition font-mono">
+          <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">年</span>
+        </div>
+        <input type="range" id="yearsSlider" min="1" max="40" step="1" value="30"
+          class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer custom-range-thumb">
+        <div class="flex justify-between mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+          <span>年投入本金:</span>
+          <span id="annualContributionText" class="font-bold text-slate-700 font-mono">12 萬元 / 年</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Top KPI Highlights Grid -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
+      
+      <!-- Card 1: Principal -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="w-1.5 h-full bg-slate-400 absolute left-0 top-0"></div>
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">累積投入本金</span>
+          <div class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-piggy-bank"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div id="kpiPrincipal" class="text-2xl font-extrabold text-slate-800 tracking-tight font-mono">360 萬</div>
+          <div class="text-[11px] text-slate-400 mt-1 flex items-center">
+            <span>年投入 NT$ <span id="kpiAnnualPrincipal">120,000</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Nominal Asset -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="w-1.5 h-full bg-indigo-500 absolute left-0 top-0"></div>
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-bold text-indigo-700 uppercase tracking-wider">名目資產總額</span>
+          <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-sack-dollar"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div id="kpiNominal" class="text-2xl font-extrabold text-indigo-600 tracking-tight font-mono">1,973.9 萬</div>
+          <div class="text-[11px] text-indigo-500 mt-1 flex items-center font-medium">
+            <i class="fa-solid fa-arrow-trend-up mr-1 text-[10px]"></i> 名目累積報酬率 <span id="kpiNominalROI" class="font-bold ml-1">+448%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Real Asset (Purchasing Power) -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="w-1.5 h-full bg-emerald-500 absolute left-0 top-0"></div>
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider">實質購買力資產</span>
+          <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div id="kpiReal" class="text-2xl font-extrabold text-emerald-600 tracking-tight font-mono">1,133.5 萬</div>
+          <div class="text-[11px] text-emerald-600 mt-1 flex items-center font-medium">
+            <i class="fa-solid fa-check mr-1 text-[10px]"></i> 實質真實報酬率 <span id="kpiRealROI" class="font-bold ml-1">+215%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Inflation Erosion Gap -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="w-1.5 h-full bg-rose-500 absolute left-0 top-0"></div>
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-bold text-rose-700 uppercase tracking-wider">通膨折損差距</span>
+          <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div id="kpiErosion" class="text-2xl font-extrabold text-rose-600 tracking-tight font-mono">-840.4 萬</div>
+          <div class="text-[11px] text-rose-500 mt-1 flex items-center font-medium">
+            <span>吃掉名目財富的 <span id="kpiErosionRatio" class="font-bold">42.6%</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5: Final Year Real Profit (Passive Income Potential) -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="w-1.5 h-full bg-amber-500 absolute left-0 top-0"></div>
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">第 N 年實質獲利</span>
+          <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div id="kpiPassiveIncome" class="text-2xl font-extrabold text-amber-600 tracking-tight font-mono">74.5 萬 / 年</div>
+          <div class="text-[11px] text-amber-600 mt-1 flex items-center font-medium">
+            <span>約合月被動收入 <span id="kpiPassiveMonthly" class="font-bold">6.2 萬</span></span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Deep Financial Insights & Golden Crossover Callout -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Insight 1: Golden Crossover -->
+      <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-900 to-brand-700 text-white shadow-md flex items-start space-x-3.5">
+        <div class="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex-shrink-0 flex items-center justify-center text-amber-300 text-base">
+          <i class="fa-solid fa-star"></i>
+        </div>
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-indigo-200 font-bold">黃金交叉點 (Golden Crossover)</h3>
+          <p class="text-sm font-semibold text-white mt-1 leading-snug" id="crossoverDesc">
+            載入中...
+          </p>
+          <p class="text-[11px] text-indigo-200/80 mt-1.5">
+            在此之後，資產自身的利息收益正式超越你辛苦存下的年本金，複利雪球進入自主狂飆期！
+          </p>
+        </div>
+      </div>
+
+      <!-- Insight 2: Inflation Erosion Reality -->
+      <div class="p-4 rounded-2xl bg-white border border-rose-200 shadow-sm flex items-start space-x-3.5">
+        <div class="w-9 h-9 rounded-xl bg-rose-50 flex-shrink-0 flex items-center justify-center text-rose-500 text-base">
+          <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-rose-600 font-bold">通膨剪刀差衝擊分析</h3>
+          <p class="text-sm font-bold text-slate-800 mt-1 leading-snug" id="inflationInsightDesc">
+            載入中...
+          </p>
+          <p class="text-[11px] text-slate-500 mt-1.5">
+            若只看名目數字會產生「貨幣幻覺 (Money Illusion)」，唯有扣除物價漲幅的實質資產，才是未來能買到的真實生活品質。
+          </p>
+        </div>
+      </div>
+
+      <!-- Insight 3: Rule of 72 & Doubling Power -->
+      <div class="p-4 rounded-2xl bg-white border border-emerald-200 shadow-sm flex items-start space-x-3.5">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 flex-shrink-0 flex items-center justify-center text-emerald-600 text-base">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-emerald-600 font-bold">實質購買力翻倍週期</h3>
+          <p class="text-sm font-bold text-slate-800 mt-1 leading-snug" id="doublingInsightDesc">
+            載入中...
+          </p>
+          <p class="text-[11px] text-slate-500 mt-1.5">
+            實質成長率越高，抗通膨護城河越深厚。維持超越通膨 5%~7% 的投資組合，是資產長青的核心。
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Interactive Visualizations Section -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Chart 1: Main Scissors Gap (2 Columns on Large Screens) -->
+      <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+          <div>
+            <h3 class="text-sm font-bold text-slate-800 flex items-center">
+              <i class="fa-solid fa-chart-area text-indigo-500 mr-2"></i>
+              歷年資產成長與通膨剪刀差 (資產剪刀差趨勢)
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">本金累積 vs 實質購買力 vs 名目資產 (Excel 核心模型對照)</p>
+          </div>
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="inline-flex items-center text-slate-600 font-medium">
+              <span class="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5"></span>本金
+            </span>
+            <span class="inline-flex items-center text-emerald-600 font-medium">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span>實質
+            </span>
+            <span class="inline-flex items-center text-indigo-600 font-medium">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-1.5"></span>名目
+            </span>
+          </div>
+        </div>
+
+        <div class="relative w-full h-72 sm:h-80 pt-4">
+          <canvas id="assetGrowthChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Terminal Asset Composition Donut Chart (1 Column) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
+        <div class="pb-3 border-b border-slate-100">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center">
+            <i class="fa-solid fa-chart-pie text-cyan-500 mr-2"></i>
+            第 <span id="donutYearTitle" class="text-indigo-600 px-1 font-mono">30</span> 年資產價值結構剖析
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">名目財富的三大構成比例</p>
+        </div>
+
+        <div class="relative w-full h-60 flex items-center justify-center pt-2">
+          <canvas id="compositionDonutChart"></canvas>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1 pt-3 border-t border-slate-100 text-center">
+          <div class="p-2 rounded-lg bg-slate-50">
+            <div class="text-[10px] text-slate-500 font-medium">累積本金</div>
+            <div id="donutPrincipalVal" class="text-xs font-bold text-slate-700 font-mono mt-0.5">360 萬</div>
+          </div>
+          <div class="p-2 rounded-lg bg-emerald-50">
+            <div class="text-[10px] text-emerald-600 font-medium">實質淨獲利</div>
+            <div id="donutRealProfitVal" class="text-xs font-bold text-emerald-700 font-mono mt-0.5">773.5 萬</div>
+          </div>
+          <div class="p-2 rounded-lg bg-rose-50">
+            <div class="text-[10px] text-rose-500 font-medium">通膨折損</div>
+            <div id="donutErosionVal" class="text-xs font-bold text-rose-700 font-mono mt-0.5">840.4 萬</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Chart 2: Annual Profits Progression (Full Width or 2-col) -->
+    <section class="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+        <div>
+          <h3 class="text-sm font-bold text-slate-800 flex items-center">
+            <i class="fa-solid fa-chart-column text-amber-500 mr-2"></i>
+            每年被動獲利能力成長 (Excel G欄名目年獲利 vs H欄實質年獲利)
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">對比各年度資產帶來的單年獲利增長，以及超越本金投入的轉折點</p>
+        </div>
+        <div class="text-xs flex items-center space-x-3">
+          <span class="inline-flex items-center text-amber-600 font-medium">
+            <span class="w-2.5 h-2.5 rounded-sm bg-amber-400 mr-1.5"></span>每年名目獲利 (G欄)
+          </span>
+          <span class="inline-flex items-center text-emerald-600 font-medium">
+            <span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 mr-1.5"></span>每年實質獲利 (H欄)
+          </span>
+          <span class="inline-flex items-center text-rose-500 font-medium border-l border-slate-200 pl-3">
+            <span class="w-3 h-0.5 bg-rose-400 mr-1.5"></span>每年本金基準線
+          </span>
+        </div>
+      </div>
+      <div class="relative w-full h-72 sm:h-80 pt-4">
+        <canvas id="annualProfitChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Complete Breakdown Data Table -->
+    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+      
+      <!-- Table Header & Toolbar -->
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-800 flex items-center">
+            <i class="fa-solid fa-table-list text-indigo-600 mr-2"></i>
+            歷年複利與通膨精算明細表 (Year-by-Year Schedule)
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">公式與數值 100% 精準對齊 Excel 工作表運算機制</p>
+        </div>
+
+        <!-- Controls: Unit Toggle, Filter, CSV Export -->
+        <div class="flex flex-wrap items-center gap-2">
+          
+          <!-- Filter Mode -->
+          <div class="inline-flex rounded-xl bg-slate-200/70 p-0.5 text-xs">
+            <button id="filterAllBtn" onclick="setTableFilter('all')" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm transition">
+              全部年份
+            </button>
+            <button id="filter5yrBtn" onclick="setTableFilter('milestone')" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">
+              每5年里程碑
+            </button>
+          </div>
+
+          <!-- Unit Switch -->
+          <div class="inline-flex rounded-xl bg-slate-200/70 p-0.5 text-xs">
+            <button id="unitWanBtn" onclick="setTableUnit('wan')" class="px-2.5 py-1 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm transition">
+              萬元
+            </button>
+            <button id="unitDollarBtn" onclick="setTableUnit('dollar')" class="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition">
+              新台幣 (NT$)
+            </button>
+          </div>
+
+          <!-- CSV Export Button -->
+          <button onclick="exportToCSV()" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition shadow-xs">
+            <i class="fa-solid fa-file-csv mr-1.5 text-emerald-600"></i> 匯出 CSV 檔
+          </button>
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs whitespace-nowrap">
+          <thead class="bg-slate-100/80 text-slate-600 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+            <tr>
+              <th scope="col" class="py-3 px-4 text-center">年份 (t)</th>
+              <th scope="col" class="py-3 px-4 text-right">累積投入本金</th>
+              <th scope="col" class="py-3 px-4 text-right text-indigo-700 bg-indigo-50/40">名目資產 (A欄)</th>
+              <th scope="col" class="py-3 px-4 text-right text-emerald-700 bg-emerald-50/40">實質資產 (B欄)</th>
+              <th scope="col" class="py-3 px-4 text-right text-amber-700">名目年獲利 (G欄)</th>
+              <th scope="col" class="py-3 px-4 text-right text-emerald-800">實質年獲利 (H欄)</th>
+              <th scope="col" class="py-3 px-4 text-right text-rose-600">通膨折損差額</th>
+              <th scope="col" class="py-3 px-4 text-center">名目累積報酬</th>
+            </tr>
+          </thead>
+          <tbody id="dataTableBody" class="divide-y divide-slate-100 font-mono">
+            <!-- Dynamic Rows will be inserted here -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Table Footer Note -->
+      <div class="p-3 bg-slate-50/80 border-t border-slate-200 text-[11px] text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-1">
+        <span><i class="fa-solid fa-info-circle mr-1 text-indigo-500"></i> 標註 <span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded text-[10px] font-bold">★ 交叉點</span> 為單年名目投資獲利超越該年投入本金之轉折年份。</span>
+        <span class="text-slate-400">複利公式：名目資產 = 前期*(1+年化) + 年本金；實質資產 = 前期*(1+實質成長) + 年本金</span>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 space-y-1">
+      <p class="font-medium text-slate-700">投資複利與通膨計算比較儀表板 · 財務精算工具</p>
+      <p class="text-[11px] text-slate-400">本試算結果僅供財務規劃與教育參考，實際投資損益將依據市場變動而異。</p>
+    </div>
+  </footer>
+
+  <!-- Notification Toast Component (No alert() used) -->
+  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+    <span id="toastMsg">已完成操作</span>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // Global Application State
+    const AppState = {
+      monthly: 10000,     // NT$ / month (C2 in Excel)
+      nominalRate: 0.10,  // 10% (D3 in Excel)
+      inflationRate: 0.03,// 3% (F3 in Excel)
+      years: 30,          // Default 30 years
+      tableUnit: 'wan',   // 'wan' (萬元) or 'dollar' (元)
+      tableFilter: 'all', // 'all' or 'milestone'
+      dataSchedule: []    // Calculated row records
+    };
+
+    // Chart instances
+    let assetGrowthChart = null;
+    let annualProfitChart = null;
+    let compositionDonutChart = null;
+
+    // Toast helper
+    function showToast(message, icon = 'fa-circle-check', iconColor = 'text-emerald-400') {
+      const toast = document.getElementById('toastNotification');
+      const msg = document.getElementById('toastMsg');
+      const ic = document.getElementById('toastIcon');
+      msg.textContent = message;
+      ic.className = `fa-solid ${icon} ${iconColor} text-sm`;
+      
+      toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 2500);
+    }
+
+    // Number formatting helper
+    function formatMoney(amount, unit = AppState.tableUnit, showDecimals = true) {
+      if (unit === 'wan') {
+        const valInWan = amount / 10000;
+        if (Math.abs(valInWan) >= 100) {
+          return valInWan.toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' 萬';
+        }
+        return valInWan.toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' 萬';
+      } else {
+        return 'NT$ ' + Math.round(amount).toLocaleString('zh-TW');
+      }
+    }
+
+    // Core Calculation Model - 100% Matching "年化與通膨.xlsx"
+    function runCalculations() {
+      const monthly = AppState.monthly;
+      const rNom = AppState.nominalRate;
+      const rInf = AppState.inflationRate;
+      // Excel row 3: E3 = D3 + 1 - F3 => real growth rate = E3 - 1 = rNom - rInf
+      const rReal = rNom - rInf;
+      const totalYears = AppState.years;
+      const annualPrincipal = monthly * 12;
+
+      const schedule = [];
+      let prevNominal = 0;
+      let prevReal = 0;
+
+      for (let t = 1; t <= totalYears; t++) {
+        const principalCumulative = t * annualPrincipal;
+        let nominalAsset = 0;
+        let realAsset = 0;
+        let nominalProfit = 0;
+        let realProfit = 0;
+
+        if (t === 1) {
+          // Row 4 in Excel: Year 1
+          nominalAsset = annualPrincipal;
+          realAsset = annualPrincipal;
+          nominalProfit = 0;
+          realProfit = 0;
+        } else {
+          // Row 5+ in Excel: Year t >= 2
+          nominalProfit = prevNominal * rNom;
+          realProfit = prevReal * rReal;
+          nominalAsset = prevNominal * (1 + rNom) + annualPrincipal;
+          realAsset = prevReal * (1 + rReal) + annualPrincipal;
+        }
+
+        const inflationErosion = nominalAsset - realAsset;
+        const nominalROI = principalCumulative > 0 ? ((nominalAsset - principalCumulative) / principalCumulative) * 100 : 0;
+        const realROI = principalCumulative > 0 ? ((realAsset - principalCumulative) / principalCumulative) * 100 : 0;
+
+        schedule.push({
+          year: t,
+          principalCumulative,
+          nominalAsset,
+          realAsset,
+          nominalProfit,
+          realProfit,
+          inflationErosion,
+          nominalROI,
+          realROI,
+          annualPrincipal
+        });
+
+        prevNominal = nominalAsset;
+        prevReal = realAsset;
+      }
+
+      AppState.dataSchedule = schedule;
+      updateUI();
+    }
+
+    // Update UI components (KPIs, Insights, Charts, Table)
+    function updateUI() {
+      const schedule = AppState.dataSchedule;
+      if (!schedule.length) return;
+
+      const finalRecord = schedule[schedule.length - 1];
+      const annualPrincipal = AppState.monthly * 12;
+
+      // 1. Inputs Sync & Displays
+      document.getElementById('monthlyDisplay').textContent = 'NT$ ' + AppState.monthly.toLocaleString('zh-TW');
+      document.getElementById('nominalReturnDisplay').textContent = (AppState.nominalRate * 100).toFixed(1) + '%';
+      document.getElementById('inflationDisplay').textContent = (AppState.inflationRate * 100).toFixed(1) + '%';
+      
+      const realRateVal = (AppState.nominalRate - AppState.inflationRate) * 100;
+      document.getElementById('realGrowthDisplay').textContent = realRateVal.toFixed(1) + '%';
+      document.getElementById('yearsDisplay').textContent = AppState.years + ' 年';
+      document.getElementById('annualContributionText').textContent = (annualPrincipal / 10000).toLocaleString('zh-TW', {maximumFractionDigits: 1}) + ' 萬元 / 年';
+
+      // 2. Top KPI Cards
+      document.getElementById('kpiPrincipal').textContent = (finalRecord.principalCumulative / 10000).toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' 萬';
+      document.getElementById('kpiAnnualPrincipal').textContent = annualPrincipal.toLocaleString('zh-TW');
+      
+      document.getElementById('kpiNominal').textContent = (finalRecord.nominalAsset / 10000).toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' 萬';
+      document.getElementById('kpiNominalROI').textContent = `+${Math.round(finalRecord.nominalROI)}%`;
+
+      document.getElementById('kpiReal').textContent = (finalRecord.realAsset / 10000).toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' 萬';
+      document.getElementById('kpiRealROI').textContent = `+${Math.round(finalRecord.realROI)}%`;
+
+      document.getElementById('kpiErosion').textContent = '-' + (finalRecord.inflationErosion / 10000).toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' 萬';
+      const erosionPct = finalRecord.nominalAsset > 0 ? (finalRecord.inflationErosion / finalRecord.nominalAsset) * 100 : 0;
+      document.getElementById('kpiErosionRatio').textContent = erosionPct.toFixed(1) + '%';
+
+      document.getElementById('kpiPassiveIncome').textContent = (finalRecord.realProfit / 10000).toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' 萬 / 年';
+      const monthlyPassive = finalRecord.realProfit / 12;
+      document.getElementById('kpiPassiveMonthly').textContent = (monthlyPassive / 10000).toLocaleString('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' 萬';
+
+      // 3. Financial Insights Analysis
+      // Golden Crossover: Year where single-year nominal profit >= annual contribution S
+      let crossoverYear = null;
+      for (const row of schedule) {
+        if (row.nominalProfit >= annualPrincipal) {
+          crossoverYear = row;
+          break;
+        }
+      }
+
+      const crossoverEl = document.getElementById('crossoverDesc');
+      if (crossoverYear) {
+        crossoverEl.innerHTML = `第 <span class="text-amber-300 font-extrabold text-base">${crossoverYear.year}</span> 年名目年獲利達 <span class="text-amber-300 font-mono font-bold">${formatMoney(crossoverYear.nominalProfit, 'wan')}</span>，正式超越年投入本金 (${formatMoney(annualPrincipal, 'wan')})！`;
+      } else {
+        crossoverEl.innerHTML = `在目前設定的 ${AppState.years} 年期內，單年名目獲利尚未超過年投入本金，可考慮拉長投資年限或提高報酬率。`;
+      }
+
+      // Inflation Impact Insight
+      const inflationDescEl = document.getElementById('inflationInsightDesc');
+      inflationDescEl.innerHTML = `第 ${finalRecord.year} 年通膨折損 <span class="text-rose-600 font-extrabold">${formatMoney(finalRecord.inflationErosion, 'wan')}</span>，真實購買力僅有名目資產的 <span class="text-rose-600 font-extrabold">${(100 - erosionPct).toFixed(1)}%</span>。`;
+
+      // Doubling Period (Rule of 72 for real rate)
+      const doublingDescEl = document.getElementById('doublingInsightDesc');
+      const netRealRate = AppState.nominalRate - AppState.inflationRate;
+      if (netRealRate > 0) {
+        const doubleYears = (72 / (netRealRate * 100)).toFixed(1);
+        doublingDescEl.innerHTML = `在 ${realRateVal.toFixed(1)}% 實質年化下，實質購買力資產約每 <span class="text-emerald-600 font-extrabold">${doubleYears} 年</span> 翻倍一次！`;
+      } else {
+        doublingDescEl.innerHTML = `<span class="text-rose-500 font-bold">警告：實質成長率小於等於0%</span>，代表投資無法擊敗通膨，購買力將持續倒退。`;
+      }
+
+      // 4. Update Charts
+      updateAssetGrowthChart(schedule);
+      updateAnnualProfitChart(schedule, annualPrincipal, crossoverYear ? crossoverYear.year : null);
+      updateCompositionDonut(finalRecord);
+
+      // 5. Update Table
+      renderDataTable(schedule, crossoverYear ? crossoverYear.year : null);
+    }
+
+    // Chart 1: Asset Growth & Scissors Gap
+    function updateAssetGrowthChart(schedule) {
+      const labels = schedule.map(r => `第 ${r.year} 年`);
+      const nominalData = schedule.map(r => Math.round(r.nominalAsset / 10000));
+      const realData = schedule.map(r => Math.round(r.realAsset / 10000));
+      const principalData = schedule.map(r => Math.round(r.principalCumulative / 10000));
+
+      const ctx = document.getElementById('assetGrowthChart').getContext('2d');
+
+      if (assetGrowthChart) {
+        assetGrowthChart.data.labels = labels;
+        assetGrowthChart.data.datasets[0].data = nominalData;
+        assetGrowthChart.data.datasets[1].data = realData;
+        assetGrowthChart.data.datasets[2].data = principalData;
+        assetGrowthChart.update();
+        return;
+      }
+
+      assetGrowthChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '名目資產總額 (萬元)',
+              data: nominalData,
+              borderColor: '#4f46e5',
+              backgroundColor: 'rgba(79, 70, 229, 0.12)',
+              fill: 1, // fill towards real asset dataset
+              tension: 0.3,
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+            },
+            {
+              label: '實質購買力資產 (萬元)',
+              data: realData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              fill: 2, // fill towards principal dataset
+              tension: 0.3,
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+            },
+            {
+              label: '累積投入本金 (萬元)',
+              data: principalData,
+              borderColor: '#94a3b8',
+              backgroundColor: 'transparent',
+              borderDash: [5, 5],
+              tension: 0,
+              borderWidth: 2,
+              pointRadius: 1,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              titleFont: { size: 12, family: 'Inter' },
+              bodyFont: { size: 12, family: 'Inter' },
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} 萬元`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxTicksLimit: 10, font: { size: 11 } }
+            },
+            y: {
+              grid: { color: '#f1f5f9' },
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString() + ' 萬';
+                },
+                font: { size: 11 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Chart 2: Annual Profits
+    function updateAnnualProfitChart(schedule, annualPrincipal, crossoverYear) {
+      const labels = schedule.map(r => `第 ${r.year} 年`);
+      const nominalProfits = schedule.map(r => Math.round(r.nominalProfit / 10000 * 10) / 10);
+      const realProfits = schedule.map(r => Math.round(r.realProfit / 10000 * 10) / 10);
+      const principalLine = schedule.map(() => Math.round(annualPrincipal / 10000 * 10) / 10);
+
+      const ctx = document.getElementById('annualProfitChart').getContext('2d');
+
+      if (annualProfitChart) {
+        annualProfitChart.data.labels = labels;
+        annualProfitChart.data.datasets[0].data = nominalProfits;
+        annualProfitChart.data.datasets[1].data = realProfits;
+        annualProfitChart.data.datasets[2].data = principalLine;
+        annualProfitChart.update();
+        return;
+      }
+
+      annualProfitChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: '名目年獲利 (萬元)',
+              data: nominalProfits,
+              backgroundColor: '#fbbf24',
+              borderRadius: 4,
+            },
+            {
+              type: 'bar',
+              label: '實質年獲利 (萬元)',
+              data: realProfits,
+              backgroundColor: '#10b981',
+              borderRadius: 4,
+            },
+            {
+              type: 'line',
+              label: '年投入本金基準線 (萬元)',
+              data: principalLine,
+              borderColor: '#f43f5e',
+              borderWidth: 2,
+              borderDash: [6, 4],
+              pointRadius: 0,
+              fill: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y} 萬元`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxTicksLimit: 12, font: { size: 11 } }
+            },
+            y: {
+              grid: { color: '#f1f5f9' },
+              ticks: {
+                callback: function(value) {
+                  return value + ' 萬';
+                },
+                font: { size: 11 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Chart 3: Terminal Donut Breakdown
+    function updateCompositionDonut(finalRecord) {
+      document.getElementById('donutYearTitle').textContent = finalRecord.year;
+
+      const principal = finalRecord.principalCumulative;
+      const realProfit = Math.max(0, finalRecord.realAsset - principal);
+      const erosion = Math.max(0, finalRecord.inflationErosion);
+
+      document.getElementById('donutPrincipalVal').textContent = formatMoney(principal, 'wan');
+      document.getElementById('donutRealProfitVal').textContent = formatMoney(realProfit, 'wan');
+      document.getElementById('donutErosionVal').textContent = formatMoney(erosion, 'wan');
+
+      const ctx = document.getElementById('compositionDonutChart').getContext('2d');
+
+      const dataValues = [
+        Math.round(principal / 10000),
+        Math.round(realProfit / 10000),
+        Math.round(erosion / 10000)
+      ];
+
+      if (compositionDonutChart) {
+        compositionDonutChart.data.datasets[0].data = dataValues;
+        compositionDonutChart.update();
+        return;
+      }
+
+      compositionDonutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['累積投入本金', '實質累積淨利', '通膨侵蝕折損'],
+          datasets: [{
+            data: dataValues,
+            backgroundColor: ['#94a3b8', '#10b981', '#f43f5e'],
+            borderWidth: 2,
+            borderColor: '#ffffff',
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '68%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                font: { size: 11, family: 'Inter' },
+                padding: 12
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  const val = context.parsed;
+                  const total = dataValues.reduce((a, b) => a + b, 0);
+                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                  return `${context.label}: ${val.toLocaleString()} 萬 (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Render Data Table Rows
+    function renderDataTable(schedule, crossoverYear) {
+      const tbody = document.getElementById('dataTableBody');
+      tbody.innerHTML = '';
+
+      const unit = AppState.tableUnit;
+      const filter = AppState.tableFilter;
+
+      schedule.forEach((row) => {
+        // Filter logic: milestone (every 5 years or last year)
+        if (filter === 'milestone' && (row.year % 5 !== 0 && row.year !== schedule.length)) {
+          return;
+        }
+
+        const isCrossover = row.year === crossoverYear;
+        const tr = document.createElement('tr');
+        tr.className = isCrossover 
+          ? 'bg-amber-50/70 hover:bg-amber-100/60 transition-colors font-medium border-l-4 border-amber-400' 
+          : 'hover:bg-slate-50 transition-colors';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-4 text-center font-bold text-slate-700">
+            ${row.year} 年
+            ${isCrossover ? '<span class="ml-1 bg-amber-500 text-white text-[9px] px-1 py-0.2 rounded font-bold">★ 交叉點</span>' : ''}
+          </td>
+          <td class="py-2.5 px-4 text-right text-slate-600">${formatMoney(row.principalCumulative, unit)}</td>
+          <td class="py-2.5 px-4 text-right font-bold text-indigo-700 bg-indigo-50/30">${formatMoney(row.nominalAsset, unit)}</td>
+          <td class="py-2.5 px-4 text-right font-bold text-emerald-700 bg-emerald-50/30">${formatMoney(row.realAsset, unit)}</td>
+          <td class="py-2.5 px-4 text-right text-amber-600">${formatMoney(row.nominalProfit, unit)}</td>
+          <td class="py-2.5 px-4 text-right text-emerald-600">${formatMoney(row.realProfit, unit)}</td>
+          <td class="py-2.5 px-4 text-right text-rose-500 font-semibold">-${formatMoney(row.inflationErosion, unit)}</td>
+          <td class="py-2.5 px-4 text-center font-semibold text-slate-500">+${Math.round(row.nominalROI)}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Table Filter switch (All vs Milestones)
+    function setTableFilter(filter) {
+      AppState.tableFilter = filter;
+      const allBtn = document.getElementById('filterAllBtn');
+      const mBtn = document.getElementById('filter5yrBtn');
+
+      if (filter === 'all') {
+        allBtn.className = "px-2.5 py-1 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm transition";
+        mBtn.className = "px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition";
+      } else {
+        mBtn.className = "px-2.5 py-1 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm transition";
+        allBtn.className = "px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition";
+      }
+
+      runCalculations();
+      showToast(filter === 'all' ? '顯示全部年份' : '已篩選每 5 年關鍵里程碑');
+    }
+
+    // Table Unit switch (萬 vs 元)
+    function setTableUnit(unit) {
+      AppState.tableUnit = unit;
+      const wanBtn = document.getElementById('unitWanBtn');
+      const dollarBtn = document.getElementById('unitDollarBtn');
+
+      if (unit === 'wan') {
+        wanBtn.className = "px-2.5 py-1 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm transition";
+        dollarBtn.className = "px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition";
+      } else {
+        dollarBtn.className = "px-2.5 py-1 rounded-lg font-semibold bg-white text-indigo-700 shadow-sm transition";
+        wanBtn.className = "px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:text-slate-900 transition";
+      }
+
+      renderDataTable(AppState.dataSchedule, null);
+      showToast(unit === 'wan' ? '表格單位已切換為「萬元」' : '表格單位已切換為完整「新台幣 NT$」');
+    }
+
+    // CSV Export Function (With UTF-8 BOM for Microsoft Excel)
+    function exportToCSV() {
+      const schedule = AppState.dataSchedule;
+      if (!schedule.length) return;
+
+      const headers = [
+        "年份",
+        "累積投入本金(元)",
+        "名目資產(元)",
+        "實質資產(元)",
+        "每年名目獲利(元)",
+        "每年實質獲利(元)",
+        "通膨折損金額(元)",
+        "名目累積報酬率(%)",
+        "實質累積報酬率(%)"
+      ];
+
+      const rows = schedule.map(r => [
+        `第${r.year}年`,
+        Math.round(r.principalCumulative),
+        Math.round(r.nominalAsset),
+        Math.round(r.realAsset),
+        Math.round(r.nominalProfit),
+        Math.round(r.realProfit),
+        Math.round(r.inflationErosion),
+        r.nominalROI.toFixed(1) + "%",
+        r.realROI.toFixed(1) + "%"
+      ]);
+
+      const csvContent = "\uFEFF" + [
+        headers.join(","),
+        ...rows.map(e => e.join(","))
+      ].join("\r\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `投資複利與通膨計算比較_月投${AppState.monthly}_年化${AppState.nominalRate*100}%_通膨${AppState.inflationRate*100}%.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast("已成功下載 CSV 試算表！", "fa-file-excel", "text-emerald-400");
+    }
+
+    // Quick presets handler
+    function applyPreset(monthly, nominalPct, inflationPct, years) {
+      AppState.monthly = monthly;
+      AppState.nominalRate = nominalPct / 100;
+      AppState.inflationRate = inflationPct / 100;
+      AppState.years = years;
+
+      // Update input fields
+      document.getElementById('monthlyInput').value = monthly;
+      document.getElementById('monthlySlider').value = Math.min(monthly, 100000);
+      document.getElementById('nominalReturnInput').value = nominalPct;
+      document.getElementById('nominalReturnSlider').value = nominalPct;
+      document.getElementById('inflationInput').value = inflationPct;
+      document.getElementById('inflationSlider').value = inflationPct;
+      document.getElementById('yearsInput').value = years;
+      document.getElementById('yearsSlider').value = years;
+
+      runCalculations();
+      showToast(`已套用情境: 月存 ${monthly.toLocaleString()} / 年化 ${nominalPct}% / 通膨 ${inflationPct}%`);
+    }
+
+    // Quick Monthly Setter
+    function setMonthly(val) {
+      AppState.monthly = val;
+      document.getElementById('monthlyInput').value = val;
+      document.getElementById('monthlySlider').value = Math.min(val, 100000);
+      runCalculations();
+    }
+
+    // Attach Event Listeners for Two-Way Binding
+    function setupEventListeners() {
+      // Monthly
+      const mInput = document.getElementById('monthlyInput');
+      const mSlider = document.getElementById('monthlySlider');
+      mInput.addEventListener('input', (e) => {
+        const val = Math.max(100, Number(e.target.value) || 0);
+        AppState.monthly = val;
+        mSlider.value = Math.min(val, 100000);
+        runCalculations();
+      });
+      mSlider.addEventListener('input', (e) => {
+        const val = Number(e.target.value);
+        AppState.monthly = val;
+        mInput.value = val;
+        runCalculations();
+      });
+
+      // Nominal Rate
+      const nrInput = document.getElementById('nominalReturnInput');
+      const nrSlider = document.getElementById('nominalReturnSlider');
+      nrInput.addEventListener('input', (e) => {
+        const val = Math.max(0, Number(e.target.value) || 0);
+        AppState.nominalRate = val / 100;
+        nrSlider.value = val;
+        runCalculations();
+      });
+      nrSlider.addEventListener('input', (e) => {
+        const val = Number(e.target.value);
+        AppState.nominalRate = val / 100;
+        nrInput.value = val.toFixed(1);
+        runCalculations();
+      });
+
+      // Inflation Rate
+      const infInput = document.getElementById('inflationInput');
+      const infSlider = document.getElementById('inflationSlider');
+      infInput.addEventListener('input', (e) => {
+        const val = Math.max(0, Number(e.target.value) || 0);
+        AppState.inflationRate = val / 100;
+        infSlider.value = val;
+        runCalculations();
+      });
+      infSlider.addEventListener('input', (e) => {
+        const val = Number(e.target.value);
+        AppState.inflationRate = val / 100;
+        infInput.value = val.toFixed(1);
+        runCalculations();
+      });
+
+      // Years
+      const yInput = document.getElementById('yearsInput');
+      const ySlider = document.getElementById('yearsSlider');
+      yInput.addEventListener('input', (e) => {
+        const val = Math.max(1, Math.min(50, Number(e.target.value) || 1));
+        AppState.years = val;
+        ySlider.value = Math.min(val, 40);
+        runCalculations();
+      });
+      ySlider.addEventListener('input', (e) => {
+        const val = Number(e.target.value);
+        AppState.years = val;
+        yInput.value = val;
+        runCalculations();
+      });
+
+      // Reset Button
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        applyPreset(10000, 10.0, 3.0, 30);
+      });
+    }
+
+    // App Initialization
+    window.addEventListener('load', () => {
+      setupEventListeners();
+      runCalculations();
+    });
+  </script>
+</body>
+</html>
